@@ -14,8 +14,11 @@ class PixelArtApp:
 
         self.original_image = None
         self.preview_original = None
+        self.pixelated_full = None
+        self.preview_pixelated = None
 
         self.tk_preview_original = None
+        self.tk_preview_pixelated = None
 
         self.setup_ui()
 
@@ -41,6 +44,19 @@ class PixelArtApp:
             bg="#f0f0f0", font=("Arial", 10), fg="#555"
         )
         self.size_label.pack(side=tk.RIGHT, padx=20)
+
+        self.scale_label = tk.Label(
+            control_frame, text="Размер пикселя: 10",
+            bg="#f0f0f0", font=("Arial", 10)
+        )
+        self.scale_label.pack(side=tk.RIGHT, padx=20)
+
+        self.pixel_scale = tk.Scale(
+            control_frame, from_=1, to=100, orient=tk.HORIZONTAL,
+            command=self.update_pixelation, bg="#f0f0f0", length=300
+        )
+        self.pixel_scale.set(10)
+        self.pixel_scale.pack(side=tk.RIGHT, padx=10)
 
         image_frame = tk.Frame(self.root, bg="#f0f0f0")
         image_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
@@ -92,12 +108,43 @@ class PixelArtApp:
 
             w, h = self.original_image.size
             self.size_label.config(text=f"Размер: {w}×{h} px")
+            self.btn_save.config(state=tk.NORMAL)
 
-            self.tk_preview_original = ImageTk.PhotoImage(self.preview_original)
-            self.label_original.config(image=self.tk_preview_original)
+            self.update_pixelation()
 
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось загрузить изображение:\n{e}")
+
+    def update_pixelation(self, event=None):
+        if self.original_image is None:
+            return
+
+        block_size = self.pixel_scale.get()
+        self.scale_label.config(text=f"Размер пикселя: {block_size}")
+
+        w, h = self.original_image.size
+
+        new_w = max(1, w // block_size)
+        new_h = max(1, h // block_size)
+
+        small_image = self.original_image.resize(
+            (new_w, new_h), Image.Resampling.NEAREST
+        )
+
+        self.pixelated_full = small_image.resize(
+            (w, h), Image.Resampling.NEAREST
+        )
+
+        self.preview_pixelated = self.pixelated_full.copy()
+        self.preview_pixelated.thumbnail(
+            (PREVIEW_MAX, PREVIEW_MAX), Image.Resampling.NEAREST
+        )
+
+        self.tk_preview_original = ImageTk.PhotoImage(self.preview_original)
+        self.tk_preview_pixelated = ImageTk.PhotoImage(self.preview_pixelated)
+
+        self.label_original.config(image=self.tk_preview_original)
+        self.label_pixelated.config(image=self.tk_preview_pixelated)
 
     def save_image(self):
         messagebox.showinfo("Информация", "Функция сохранения будет добавлена позже")
